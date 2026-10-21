@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/**
+ * Tailwind v4 configures the design system in CSS, not in a JS config file.
+ * Everything declared in `@theme` becomes both a CSS custom property and a
+ * utility class (`--color-cream` → `bg-cream`, `text-cream`, `border-cream`…),
+ * which is why the WebGL fallback can reference `var(--color-espresso)` and stay
+ * in sync with the Tailwind classes around it.
+ *
+ * Palette: a light-roast coffee scale. `cream` is the page, `crema` the raised
+ * panels, `espresso` the ink, `caramel` the single accent. Naming them after the
+ * material rather than by role (`primary`, `secondary`) keeps the theme legible
+ * at a glance in markup.
+ */
+@theme {
+  --color-cream: #f3ebe0;
+  --color-crema: #e7dac9;
+  --color-espresso: #2b1d13;
+  --color-caramel: #a9713c;
+  --color-roast: #6b432a;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-display), ui-serif, Georgia, serif;
+
+  /* Slow ambient drift for the CSS-only hero fallback. */
+  --animate-drift: drift 26s ease-in-out infinite;
+  --animate-scroll-cue: scroll-cue 2.6s ease-in-out infinite;
+
+  /*
+   * Deltas only, starting from an identity transform.
+   *
+   * Placement and the bean's resting tilt both live on wrapper elements instead
+   * of in here. `transform` is a single property, so a keyframe that included
+   * them would override the wrappers — and more importantly, the reduced-motion
+   * override above collapses this animation to nothing, at which point the
+   * element falls back to whatever the classes say. Keeping the resting pose out
+   * of the keyframes is what lets the shape stay correctly tilted when the
+   * animation is switched off.
+   */
+  @keyframes drift {
+    0%,
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+    50% {
+      transform: rotate(10deg) scale(1.04);
+    }
+  }
+
+  @keyframes scroll-cue {
+    0% {
+      transform: scaleY(0.2);
+      transform-origin: top;
+    }
+    50% {
+      transform: scaleY(1);
+      transform-origin: top;
+    }
+    51% {
+      transform: scaleY(1);
+      transform-origin: bottom;
+    }
+    100% {
+      transform: scaleY(0.2);
+      transform-origin: bottom;
+    }
+  }
+}
+
+@layer base {
+  html {
+    /*
+     * Lenis handles smooth scrolling, so native `scroll-behavior: smooth` must
+     * stay off — the two compete for the same scroll position and the result is
+     * a fight neither wins.
+     */
+    scroll-behavior: auto;
+    background-color: var(--color-cream);
+    color: var(--color-espresso);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    /*
+     * `overflow-x: clip` over `hidden`: `hidden` on a scroll container silently
+     * creates a scroll *context*, which breaks `position: sticky` and confuses
+     * ScrollTrigger's pinning. `clip` crops without that side effect.
+     */
+    overflow-x: clip;
+  }
+
+  /* Applied by SmoothScrollProvider while the preloader is up. */
+  html.is-scroll-locked,
+  html.is-scroll-locked body {
+    overflow: hidden;
+    /* Prevents iOS from scrolling the page behind the curtain via touch. */
+    overscroll-behavior: none;
+  }
+
+  /*
+   * Safety net. Lenis' own stylesheet applies `overflow: hidden` to
+   * `html.lenis-stopped`, so if Lenis is ever stopped outside of our preloader
+   * lock the page becomes silently unscrollable — a nasty failure mode, because
+   * it looks like a hang rather than a bug. Restore native scrolling whenever we
+   * are not deliberately locking.
+   */
+  html.lenis-stopped:not(.is-scroll-locked) {
+    overflow: auto;
+  }
+
+  ::selection {
+    background-color: var(--color-caramel);
+    color: var(--color-cream);
+  }
+
+  /* Visible focus ring that holds up against the light palette. */
+  :focus-visible {
+    outline: 1px solid var(--color-roast);
+    outline-offset: 3px;
+  }
+}
+
+/*
+ * Honour the OS setting at the CSS layer too, not just in JS. The JS guards stop
+ * us *creating* animations; this stops any decorative CSS animation that shipped
+ * with the markup.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
